@@ -1,0 +1,113 @@
+# FROM osrf/ros:noetic-desktop
+FROM nvcr.io/nvidia/l4t-jetpack:r35.4.1 
+
+# --- START OF PRE-REQUISITE TOOLS INSTALLATION ---
+# Install essential tools like curl and gnupg2 first, before attempting to add ROS key/repo
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg2 \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+# --- END OF PRE-REQUISITE TOOLS INSTALLATION ---
+
+# --- START OF ROS SETUP ---
+# Clean up existing keys properly (optional, but good practice)
+RUN rm -f /etc/apt/sources.list.d/ros*.list && \
+    apt-key del F42ED6FBAB17C654 || true
+
+# Add the updated key using the current method
+RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt-key add -
+
+# Add ROS repository
+RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list
+
+# Update apt package list AFTER adding ROS repository and key
+RUN apt-get update
+# --- END OF ROS SETUP ---
+
+# Install core dependencies and ROS packages (now that the repository is added and updated)
+RUN apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    python3-pip \
+    git \
+    python3-rosdep \
+    ros-noetic-ros-base \
+    ros-noetic-std-msgs \
+    libqt5gui5 \
+    libqt5webkit5 \
+    libqt5test5 \
+    # xvfb \
+    libhdf5-dev \
+    hdf5-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Upgrade pip to the latest version
+RUN pip3 install --upgrade pip
+
+RUN pip3 install --no-cache-dir protobuf==3.19.6
+
+# Instalasi package Python yang dibutuhkan dengan versi spesifik
+RUN pip3 install --no-cache-dir -i https://pypi.org/simple --upgrade --use-deprecated=legacy-resolver \
+    tensorflow==2.12.1 \
+    # tensorflow-addons \
+    tensorflow-estimator \
+    tensorflow-io-gcs-filesystem \
+    wheel \
+    matplotlib \
+    matplotlib-inline \
+    opencv-python \
+    pillow \
+    scikit-learn==1.1.3 \
+    tensorboard \
+    tensorboard-data-server \
+    tensorboard-plugin-wit
+
+# Now we can use pip3 to install Firebase and other packages
+RUN pip3 install --no-cache-dir firebase-admin
+RUN pip3 install --no-cache-dir pyserial
+RUN pip3 install --no-cache-dir numpy
+# Install joblib
+RUN pip3 install --no-cache-dir joblib
+# Install scikit-learn
+# RUN pip3 install --no-cache-dir scikit-learn
+
+# Install ROS Python packages
+RUN pip3 install --no-cache-dir rospkg catkin_pkg
+
+# Clone YOLOv9 repository
+WORKDIR /home
+# RUN git clone https://github.com/WongKinYiu/yolov9.git # uncomment if you need this to be cloned inside the image
+
+# Create and set working directory
+WORKDIR /home/ros_ws
+
+# Copy Firebase credentials
+# COPY mlff-firebase-key.json /home/ros_ws/
+
+# Copy files
+# COPY bismillah_pengujian_fixed.py /home/ros_ws/
+# COPY subscriber.py /home/ros_ws/
+# COPY sensor.py /home/ros_ws/
+# COPY launch.sh /home/ros_ws/
+COPY entrypoint.sh /entrypoint.sh
+# COPY waskita_ent1.mp4 /home/ros_ws/waskita_ent1.mp4
+# COPY Final_50k/inference_graph/saved_model /home/ros_ws/Final_50k/inference_graph/saved_model
+COPY . /home/ros_ws/
+
+# Make scripts executable
+RUN chmod +x /entrypoint.sh
+RUN chmod +x /home/ros_ws/launch.sh
+
+# Setup display
+ENV QT_X11_NO_MITSHM=1
+ENV DISPLAY=:99
+ENV LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libGLdispatch.so.0
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]

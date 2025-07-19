@@ -1,0 +1,28 @@
+# Tulis .gitignore yang benar
+@"
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Model files
+*.pt
+*.pth
+*.weights
+
+# Video files
+*.mp4
+*.avi
+*.mov
+
+# Firebase credentials
+mlff-firebase-key.json
+
+# Docker generated
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+"@ | Set-Content -Path .gitignore

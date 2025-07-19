@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  mlff_jetson:
+    build:
+      context: .
+      dockerfile: Dockerfile.jetson
+    container_name: mlff_jetson_orin
+    restart: unless-stopped
+    
+    # GPU access for Jetson Orin
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,display
+      - DISPLAY=${DISPLAY:-:99}
+      - QT_X11_NO_MITSHM=1
+      - CUDA_VISIBLE_DEVICES=0
+      - TF_FORCE_GPU_ALLOW_GROWTH=true
+      - TF_GPU_MEMORY_ALLOW_GROWTH=true
+    
+    # Volume mounts
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./output_videos:/home/ros_ws/output_videos
+      - ./logs:/home/ros_ws/logs
+      - /dev/shm:/dev/shm
+    
+    # Device access for camera and sensors
+    devices:
+      - /dev/video0:/dev/video0  # Camera access
+      - /dev/ttyUSB0:/dev/ttyUSB0  # RFID reader
+      - /dev/ttyACM0:/dev/ttyACM0  # Alternative sensor port
+    
+    # Network configuration
+    network_mode: host
+    
+    # Privileged mode for hardware access
+    privileged: true
+    
+    # Memory limits (adjust based on your Jetson Orin memory)
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 2G
+    
+    # IPC mode for GUI applications
+    ipc: host
+    
+    # Command to run
+    command: ["bash", "/home/ros_ws/launch.sh"]
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python3", "/home/ros_ws/test_gpu.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Add a monitoring service
+  system_monitor:
+    image: prom/node-exporter:latest
+    container_name: mlff_monitor
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    profiles:
+      - monitoring

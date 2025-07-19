@@ -1,0 +1,18 @@
+# Minimal requirements for bismillah_pengujian_fixed.py
+# Core dependencies
+numpy==1.21.6
+tensorflow==2.11.0
+opencv-python-headless==4.8.0.76
+pillow==9.5.0
+
+# ROS dependencies
+rospkg==1.5.0
+catkin_pkg==0.5.2
+
+# Optional dependencies (uncomment if needed)
+# firebase-admin==6.2.0
+# pyserial==3.5
+# matplotlib==3.5.3
+# scipy==1.9.3
+# pandas==1.5.3
+# seaborn==0.12.2
